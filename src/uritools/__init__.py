@@ -276,8 +276,11 @@ class SplitResult(
 
     def getpath(self, encoding="utf-8", errors="strict"):
         """Return the normalized decoded URI path."""
-        path = self.__remove_dot_segments(self.path)
-        return uridecode(path, encoding, errors)
+        # Percent-encoded "."/".." must be decoded before dot-segment removal.
+        path = uridecode(self.path, encoding, errors)
+        if isinstance(path, bytes):
+            return SplitResultBytes._remove_dot_segments(path)
+        return SplitResultString._remove_dot_segments(path)
 
     def getquery(self, default=None, encoding="utf-8", errors="strict"):
         """Return the decoded query string, or `default` if the original URI
@@ -383,10 +386,10 @@ class SplitResult(
 
         # RFC 3986 5.2.2. Transform References
         if scheme is not None and (strict or scheme != self.scheme):
-            path = self.__remove_dot_segments(path)
+            path = self._remove_dot_segments(path)
         elif authority is not None:
             scheme = self.scheme
-            path = self.__remove_dot_segments(path)
+            path = self._remove_dot_segments(path)
         elif not path:
             scheme = self.scheme
             authority = self.authority
@@ -395,11 +398,11 @@ class SplitResult(
         elif path.startswith(self._SLASH):
             scheme = self.scheme
             authority = self.authority
-            path = self.__remove_dot_segments(path)
+            path = self._remove_dot_segments(path)
         else:
             scheme = self.scheme
             authority = self.authority
-            path = self.__remove_dot_segments(self.__merge(path))
+            path = self._remove_dot_segments(self.__merge(path))
         return type(self)(scheme, authority, path, query, fragment)
 
     def __merge(self, path):
@@ -411,7 +414,7 @@ class SplitResult(
             return parts[1].join((parts[0], path))
 
     @classmethod
-    def __remove_dot_segments(cls, path):
+    def _remove_dot_segments(cls, path):
         # RFC 3986 5.2.4. Remove Dot Segments
         pseg = []
         for s in path.split(cls._SLASH):

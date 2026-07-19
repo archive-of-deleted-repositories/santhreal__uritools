@@ -360,6 +360,27 @@ class SplitTest(unittest.TestCase):
             parts = urisplit(("/" + uri).encode("ascii"))
             self.assertEqual(abspath, parts.getpath())
 
+    def test_getpath_percent_encoded_dot_segments(self):
+        # Literal ".." is removed; percent-encoded "%2e%2e" must normalize the same.
+        cases = [
+            ("/a/../b", "/b"),
+            ("/a/%2e%2e/b", "/b"),
+            ("/a/%2E%2E/b", "/b"),
+            ("/%2e%2e/b", "/b"),
+            ("/a/b/%2e%2e/%2e%2e/c", "/c"),
+            ("/a/%2e/b", "/a/b"),
+            ("/.%2e/b", "/b"),
+            ("/%2e./b", "/b"),
+            ("/a%2f..%2fb", "/b"),
+            ("http://h/a/%2e%2e/b", "/b"),
+        ]
+        for uri, expected in cases:
+            parts = urisplit(uri)
+            self.assertEqual(expected, parts.getpath())
+            parts = urisplit(uri.encode("ascii"))
+            self.assertEqual(expected, parts.getpath())
+            self.assertEqual(expected.encode("ascii"), parts.getpath(encoding=None))
+
     def test_getquery(self):
         cases = [
             ("", [], {}),
