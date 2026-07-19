@@ -276,7 +276,6 @@ class SplitResult(
 
     def getpath(self, encoding="utf-8", errors="strict"):
         """Return the normalized decoded URI path."""
-        # Percent-encoded "."/".." must be decoded before dot-segment removal.
         path = uridecode(self.path, encoding, errors)
         if isinstance(path, bytes):
             return SplitResultBytes._remove_dot_segments(path)
